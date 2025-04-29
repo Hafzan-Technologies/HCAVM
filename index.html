@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hafzan Composite Adaptive Valuation Model (HCAVM) Fair Value Estimator</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(to right, #f4f9fd, #eaf4ff);
+      color: #343a40;
+      margin: 2rem auto;
+      max-width: 700px;
+      padding: 2rem;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      border-radius: 15px;
+    }
+
+    h1 {
+      color: #0056b3;
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+    }
+
+    label {
+      font-weight: 600;
+      margin: 0.5rem 0 0.3rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    label span {
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      background-color: #007bff;
+      color: white;
+      border-radius: 50%;
+      text-align: center;
+      font-size: 14px;
+      cursor: pointer;
+      line-height: 18px;
+      position: relative;
+    }
+
+    label span:hover::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      top: 25px;
+      left: 0;
+      z-index: 1;
+      background: #333;
+      color: white;
+      padding: 5px 8px;
+      border-radius: 5px;
+      font-size: 0.85rem;
+      white-space: nowrap;
+    }
+
+    input[type="number"] {
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 1rem;
+      background-color: #fff;
+      transition: border-color 0.3s ease;
+    }
+
+    input[type="number"]:focus {
+      border-color: #007bff;
+      outline: none;
+    }
+
+    button {
+      margin-top: 1rem;
+      background: #007bff;
+      color: white;
+      font-size: 1.1rem;
+      padding: 0.8rem;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    .result {
+      margin-top: 2rem;
+      font-size: 1.25rem;
+      font-weight: bold;
+      color: #28a745;
+      text-align: center;
+      border-top: 1px solid #ddd;
+      padding-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>Hafzan Composite Adaptive Valuation Model (HCAVM) Fair Value Estimator</h1>
+  <form id="hcavmForm">
+    <label>Current Revenue (in millions): <span data-tooltip="Latest annual revenue of the startup">?</span></label>
+    <input type="number" id="revenue" required />
+
+    <label>Startup Growth Rate (%): <span data-tooltip="Expected annual revenue growth rate of the startup">?</span></label>
+    <input type="number" id="g_startup" required />
+
+    <label>Industry Growth Rate (%): <span data-tooltip="Average growth rate of the sector the startup operates in">?</span></label>
+    <input type="number" id="g_industry" required />
+
+    <label>Industry EV/Rev Multiple: <span data-tooltip="Average EV/Revenue multiple from similar public/private firms">?</span></label>
+    <input type="number" id="industryMultiple" required />
+
+    <label>Exit Multiple: <span data-tooltip="Estimated EV/Revenue multiple the startup might achieve at exit">?</span></label>
+    <input type="number" id="exitMultiple" required />
+
+    <label>Time to Exit (Years): <span data-tooltip="Number of years expected until IPO, acquisition, or liquidity event">?</span></label>
+    <input type="number" id="t" required />
+
+    <label>VC Discount Rate (%): <span data-tooltip="Discount rate representing VC's required return on investment">?</span></label>
+    <input type="number" id="r_vc" required />
+
+    <label>Scenario Exit Value (Success, in millions): <span data-tooltip="Expected exit valuation in a successful outcome">?</span></label>
+    <input type="number" id="exitValue" required />
+
+    <label>Scenario Probability (Success, e.g. 0.6): <span data-tooltip="Estimated probability of the success scenario occurring">?</span></label>
+    <input type="number" step="0.01" id="p_success" required />
+
+    <label>Real Option Value (in millions): <span data-tooltip="Value from flexibility, pivots, or product launches (strategic optionality)">?</span></label>
+    <input type="number" id="roa" required />
+
+    <label>Liquidity Discount (%): <span data-tooltip="Discount applied due to illiquidity of private shares (typically 20–40%)">?</span></label>
+    <input type="number" id="ld" required />
+
+    <label>Sentiment Multiplier (e.g. 1.05): <span data-tooltip="Market optimism/pessimism scaler; 1.0 = neutral">?</span></label>
+    <input type="number" step="0.01" id="smdf" required />
+
+    <button type="button" onclick="calculateHCAVM()">Calculate Fair Value</button>
+  </form>
+
+  <div class="result" id="result"></div>
+
+  <script>
+    function calculateHCAVM() {
+      const rev = parseFloat(document.getElementById('revenue').value);
+      const g_s = parseFloat(document.getElementById('g_startup').value) / 100;
+      const g_i = parseFloat(document.getElementById('g_industry').value) / 100;
+      const indMult = parseFloat(document.getElementById('industryMultiple').value);
+      const exitMult = parseFloat(document.getElementById('exitMultiple').value);
+      const t = parseFloat(document.getElementById('t').value);
+      const r_vc = parseFloat(document.getElementById('r_vc').value) / 100;
+      const exitVal = parseFloat(document.getElementById('exitValue').value);
+      const p_s = parseFloat(document.getElementById('p_success').value);
+      const roa = parseFloat(document.getElementById('roa').value);
+      const ld = parseFloat(document.getElementById('ld').value) / 100;
+      const smdf = parseFloat(document.getElementById('smdf').value);
+
+      const C1 = (rev * Math.pow(1 + g_s, t) * exitMult) / Math.pow(1 + r_vc, t);
+      const C2 = rev * indMult * (1 + (g_s - g_i) / g_i);
+      const C3 = (p_s * exitVal) / Math.pow(1 + r_vc, t);
+      const C4 = roa;
+
+      const w1 = 0.4, w2 = 0.3, w3 = 0.2, w4 = 0.1;
+      const rawVal = (w1 * C1 + w2 * C2 + w3 * C3 + w4 * C4);
+      const finalVal = rawVal * (1 - ld) * smdf;
+
+      document.getElementById('result').innerText = `Estimated Fair Value: $${finalVal.toFixed(2)} million`;
+    }
+  </script>
+</body>
+</html>
